@@ -88,6 +88,92 @@ createEffect(() => {
      }
 });
 
+const TreeItem: Component<{
+  node: TreeNode;
+  selectedIds: () => Set<string>;
+  onSelect: (id: string) => void;
+}> = (props) => {
+  // 各ノードごとに開閉状態を管理（SolidJSの細粒度なリアクティビティが活きる部分です）
+  const [isOpen, setIsOpen] = createSignal(false);
+
+  // 子要素を持っているか
+  const hasChildren = () => props.node.children && props.node.children.length > 0;
+  // 自分が選択されているか
+  const isSelected = () => props.selectedIds().has(props.node.id);
+  //console.log(props.node);
+  return (
+    <div style={{ "margin-left": "16px", "user-select": "none" }}>
+      <div 
+        style={{ 
+          display: "flex", 
+          "align-items": "center", 
+          gap: "8px", 
+          padding: "4px 0",
+          cursor: "pointer" 
+        }}
+        onClick={() => props.onSelect(props.node.id)}
+      >
+        {/* 開閉ボタン (子がある場合のみ表示) */}
+        <Show fallback={<span style={{ width: "16px" }} />} when={hasChildren()}>
+          <button
+            style={{
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              padding: 0,
+              width: "16px",
+              transform: isOpen() ? "rotate(90deg)" : "rotate(0deg)",
+              transition: "transform 0.15s ease",
+            }}
+            onClick={(e) => {
+              e.stopPropagation(); // 行全体の選択イベント発火を防ぐ
+              setIsOpen(!isOpen());
+            }}
+          >
+            ▶
+          </button>
+        </Show>
+
+        {/* チェックボックス風の選択インジケーター */}
+	{/*
+        <input
+          type="checkbox"
+          checked={isSelected()}
+          onChange={() => props.onSelect(props.node.id)}
+          onClick={(e) => e.stopPropagation()} // 親へのイベント伝播防止
+        />
+*/}
+        {/* ラベルテキスト */}
+        <span style={{ "font-weight": hasChildren() ? "bold" : "normal" }}>
+          [{props.node.id}]&ensp;
+          {props.node.name}
+        </span>
+
+        <input
+          type="checkbox"
+          checked={isSelected()}
+          onChange={() => props.onSelect(props.node.id)}
+          onClick={(e) => e.stopPropagation()} // 親へのイベント伝播防止
+        />
+
+      </div>
+
+      {/* 子要素の再帰レンダリング (開いているときのみ) */}
+      <Show when={hasChildren() && isOpen()}>
+        <For each={props.node.children}>
+          {(child) => (
+            <TreeItem
+              node={child}
+              selectedIds={props.selectedIds}
+              onSelect={props.onSelect}
+            />
+          )}
+        </For>
+      </Show>
+    </div>
+  );
+};
+
 // 5. ターゲットのノードが兄弟間で何番目にいるか、総数はいくつかを取得する関数
 export const getSiblingsInfo = (targetId: string) => {
   const path = findStorePath(chartData, targetId);
@@ -322,6 +408,37 @@ export function ProfileModal() {
 }
 // 8. メインエントリコンポーネント（全体を組み立てる最外殻）
 export default function OrgChart9() {
+
+  const [selectedIds, setSelectedIds] = createSignal<Set<string>>(new Set());
+
+  // 選択・解除を切り替えるハンドラー
+  const handleSelect = (id: string) => {
+    const single_select = true;
+
+    if (single_select) {
+        let next = new Set(selectedIds());
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next = new Set([id]);
+        }
+       setSelectedIds(next);
+        console.log("tree select next", selectedIds());
+
+    } else {
+    
+        const next = new Set(selectedIds());
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        setSelectedIds(next);
+        console.log("tree select next", selectedIds());
+    
+    }
+    
+  };
   return (
     <div class="org-chart-wrapper-top">
       {/* 綺麗につなぎ目を処理したCSS記述ベース */}
@@ -386,6 +503,21 @@ export default function OrgChart9() {
 
       {/* ポップアップモーダル */}
       <ProfileModal />
+
+  {/* ツリー本体 */}
+      <h3>TREE</h3>
+      <div style={{ border: "1px solid #ccc", padding: "12px", "border-radius": "4px", "max-width": "300px" }}>
+        <For each={[chartData]}>
+          {(node) => (
+            <TreeItem
+              node={node}
+              selectedIds={selectedIds}
+              onSelect={handleSelect}
+            />
+          )}
+        </For>
+      </div>
+
     </div>
   );
 }
