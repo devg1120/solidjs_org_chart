@@ -1,0 +1,363 @@
+import { For, createSignal, Show } from "solid-js";
+import { createStore } from "solid-js/store";
+
+// 1. 体制図のデータ型定義
+export type OrgNode = {
+  id: string;
+  name: string;
+  role: string;
+  level: number;
+  email?: string;
+  bio?: string;
+  children?: OrgNode[];
+};
+
+// 2. 提供いただいたベースデータ
+const initialOrgData: OrgNode = {
+  id: "1",
+  name: "山田 太郎",
+  role: "代表取締役社長",
+  level: 1,
+  email: "t.yamada@example.com",
+  bio: "会社の経営戦略と全体の総括を担当しています。趣味はゴルフです。",
+  children: [
+    {
+      id: "2",
+      name: "鈴木 次郎",
+      role: "開発部長",
+      level: 2,
+      email: "j.suzuki@example.com",
+      bio: "プロダクトの開発マネジメントと技術選定を行っています。",
+      children: [
+        { id: "4", name: "佐藤 花子", role: "フロントエンド", level: 3, email: "h.sato@example.com", bio: "UI/UXデザインとSolidJS開発が得意です。" },
+        { id: "5", name: "高橋 健", role: "バックエンド", level: 3, email: "k.takahashi@example.com", bio: "Node.js、Goを使ったAPI設計・インフラ構築を担当。" },
+      ],
+    },
+    {
+      id: "3",
+      name: "田中 美咲",
+      role: "営業部長",
+      level: 2,
+      email: "m.tanaka@example.com",
+      bio: "新規クライアントの開拓と営業戦略の立案をリードしています。",
+      children: [
+        { id: "6", name: "渡辺 翔", role: "営業担当", level: 3, email: "s.watanabe@example.com", bio: "フットワークの軽さを活かした提案を心がけています。" },
+        { id: "8", name: "横山 合", role: "営業担当", level: 3, email: "s.watanabe@example.com", bio: "フットワークの軽さを活かした提案を心がけています。" },
+        { id: "9", name: "山口 完", role: "営業担当", level: 3, email: "s.watanabe@example.com", bio: "フットワークの軽さを活かした提案を心がけています。" },
+      ],
+    },
+  ],
+};
+
+// 3. グローバル状態管理 (State)
+export const [chartData, setChartData] = createStore<OrgNode>(initialOrgData);
+export const [activeProfile, setActiveProfile] = createSignal<OrgNode | null>(null);
+export const [isEditing, setIsEditing] = createSignal(false);
+export const [isAddingChild, setIsAddingChild] = createSignal(false);
+
+// 💡 モーダルが閉じたりデータが動いても、開閉した状態を完全に維持するためのSetシグナル
+//export const [expandedNodes, setExpandedNodes] = createSignal<Set<string>>(new Set(["1"]));
+export const [expandedNodes, setExpandedNodes] = createSignal<Set<string>>(new Set(["1", "2","3"]));
+
+// 💡 【新規】モーダルのドラッグ移動用の座標を管理するシグナル
+export const [modalPos, setModalPos] = createSignal({ x: 0, y: 0 });
+// 4. ツリー内を探索して目的のノードへのパス（インデックスの軌跡）を返すヘルパー関数
+export const findStorePath = (node: any, targetId: string, currentPath: string[] = []): string[] | null => {
+  if (node.id === targetId) return currentPath;
+  if (node.children) {
+    for (let i = 0; i < node.children.length; i++) {
+      const path = findStorePath(node.children[i], targetId, [...currentPath, "children", i.toString()]);
+      if (path) return path;
+    }
+  }
+  return null;
+};
+
+// 5. ターゲットのノードが兄弟間で何番目にいるか、総数はいくつかを取得する関数
+export const getSiblingsInfo = (targetId: string) => {
+  const path = findStorePath(chartData, targetId);
+  if (!path || path.length < 2) return { index: -1, total: 0, parentPath: [] };
+  const parentPath = path.slice(0, -2);
+  const parentObj = parentPath.reduce((obj, key) => obj[key], chartData as any);
+  return {
+    index: parseInt(path[path.length - 1]),
+    total: parentObj.children.length,
+    parentPath
+  };
+};
+
+// 6. 体制図の各ノードをレンダリングする再帰コンポーネント
+export function OrgChartNode(props: { node: OrgNode }) {
+  const hasChildren = () => props.node.children && props.node.children.length > 0;
+  
+  // レベル2以下かつグローバル配列にIDが登録されていなければ「閉じている」と判定
+ // const isCurrentlyOpen = () => props.node.level !== 2 || expandedNodes().has(props.node.id);
+
+const isCurrentlyOpen = () => {
+  // 最上階層（社長/レベル1）は常に開く
+  if (props.node.level === 1) return true;
+  // レベル2、レベル3、レベル4... はすべて、開閉状態管理（expandedNodes）の登録状況に100%連動させる
+  return expandedNodes().has(props.node.id);
+};
+
+  return (
+    <div class="org-node-container-top">
+      {/* カード部分：子要素持ち（has-children）の場合は左側に青い縦線マークを表示 */}
+      <div 
+        class="org-card-top" 
+        classList={{ "has-children": hasChildren() }} 
+        onClick={() => { 
+          setActiveProfile(props.node); 
+          setIsEditing(false); 
+          setIsAddingChild(false); 
+        }}
+      >
+        <div class="org-card-body">
+          <div class="org-role-top">{props.node.role}</div>
+          <div class="org-name-top">
+            <span>{props.node.name}</span>
+            <Show when={hasChildren()}>
+              <button 
+                class="org-toggle-btn" 
+                onClick={(e) => { 
+                  e.stopPropagation(); // モーダル発火を防ぐ
+                  const next = new Set(expandedNodes());
+                  if (next.has(props.node.id)) next.delete(props.node.id); else next.add(props.node.id);
+                  setExpandedNodes(next);
+                }}
+              >
+                {isCurrentlyOpen() ? "−" : "+"}
+              </button>
+            </Show>
+          </div>
+        </div>
+      </div>
+
+      {/* 子要素への直角接続線と子コンテナの再帰展開 */}
+      <Show when={hasChildren() && isCurrentlyOpen()}>
+        <div class="org-line-right-top" />
+        <div class="org-children-container-top">
+          <For each={props.node.children}>
+            {(child) => <OrgChartNode node={child} />}
+          </For>
+        </div>
+      </Show>
+    </div>
+  );
+}
+// 7. 追加・編集・移動・削除フォームを内蔵した多機能モーダルコンポーネント
+export function ProfileModal() {
+  let editName!: HTMLInputElement, editRole!: HTMLInputElement, editEmail!: HTMLInputElement, editBio!: HTMLTextAreaElement;
+
+  // 💡 【ドラッグ移動ロジック】
+  let isDragging = false;
+  let startX = 0, startY = 0;
+
+  const handleMouseDown = (e: MouseEvent) => {
+    // ボタンや入力欄のクリック時はドラッグ移動を発生させない
+    if ((e.target as HTMLElement).closest("button, input, textarea")) return;
+    
+    isDragging = true;
+    startX = e.clientX - modalPos().x;
+    startY = e.clientY - modalPos().y;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDragging) return;
+      setModalPos({
+        x: moveEvent.clientX - startX,
+        y: moveEvent.clientY - startY
+      });
+    };
+
+    const handleMouseUp = () => {
+      isDragging = false;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  return (
+    <Show when={activeProfile()}>
+      {(profile) => {
+        const sib = () => getSiblingsInfo(profile().id);
+
+        return (
+          <div class="modal-overlay" onClick={() => { setActiveProfile(null); setModalPos({ x: 0, y: 0 }); }}>
+            {/* 💡 onMouseDown と style を追加してドラッグ対応に */}
+            <div 
+              class="modal-content" 
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={handleMouseDown}
+              style={{ 
+                transform: `translate(${modalPos().x}px, ${modalPos().y}px)`,
+                cursor: "move"
+              }}
+            >
+              <button class="modal-close-btn" onClick={() => { setActiveProfile(null); setModalPos({ x: 0, y: 0 }); }}>×</button>
+              
+              {/* 【A】閲覧モード */}
+              <Show when={!isEditing() && !isAddingChild()}>
+                <div class="modal-header">
+                  <div>
+                    <span class="modal-role">{profile().role}</span>
+                    <h3 class="modal-name">{profile().name}</h3>
+                  </div>
+                </div>
+                {/* 💡 入力領域やテキスト選択のために body 内は通常の矢印カーソルに戻す */}
+                <div class="modal-body" style={{ cursor: "default" }}>
+                  <div class="info-group"><label>メールアドレス</label><p>{profile().email || "未設定"}</p></div>
+                  <div class="info-group"><label>自己紹介 / 担当業務</label><p class="bio-text">{profile().bio || "未設定"}</p></div>
+                  
+                  {/* 表示順変更ボタン */}
+                  <Show when={sib().total > 1}>
+                    <div class="info-group">
+                      <label>表示順の変更（上下の入れ替え）</label>
+                      <div style={{ display: "flex", gap: "8px", "margin-top": "4px" }}>
+                        <button 
+                          class="btn-secondary" style={{ flex: 1 }} disabled={sib().index === 0} 
+                          onClick={() => {
+                            const p = sib(); const list = [...p.parentPath.reduce((obj, key) => obj[key], chartData as any).children];
+                            const [m] = list.splice(p.index, 1); list.splice(p.index - 1, 0, m);
+                            (setChartData as any)(...p.parentPath, "children", list); setActiveProfile(null); setModalPos({ x: 0, y: 0 });
+                          }}
+                        >
+                          ▲ 上に移動
+                        </button>
+                        <button 
+                          class="btn-secondary" style={{ flex: 1 }} disabled={sib().index === sib().total - 1} 
+                          onClick={() => {
+                            const p = sib(); const list = [...p.parentPath.reduce((obj, key) => obj[key], chartData as any).children];
+                            const [m] = list.splice(p.index, 1); list.splice(p.index + 1, 0, m);
+                            (setChartData as any)(...p.parentPath, "children", list); setActiveProfile(null); setModalPos({ x: 0, y: 0 });
+                          }}
+                        >
+                          ▼ 下に移動
+                        </button>
+                      </div>
+                    </div>
+                  </Show>
+                  
+                  <div class="btn-row" style={{ "justify-content": "space-between", "margin-top": "24px" }}>
+                    <Show when={profile().id !== "1"}>
+                      <button class="btn-danger" onClick={() => {
+                        if (confirm("このメンバーを完全に削除してよろしいですか？")) {
+                          const p = sib(); const list = [...p.parentPath.reduce((obj, key) => obj[key], chartData as any).children];
+                          list.splice(p.index, 1); (setChartData as any)(...p.parentPath, "children", list); setActiveProfile(null); setModalPos({ x: 0, y: 0 });
+                        }
+                      }}>削除</button>
+                    </Show>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button class="btn-secondary" onClick={() => setIsEditing(true)}>編集</button>
+                      <button class="btn-primary" onClick={() => setIsAddingChild(true)}>部下を追加</button>
+                    </div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* 【B】編集・追加モード */}
+              <Show when={isEditing() || isAddingChild()}>
+                <div class="modal-header">
+                  <h3 style={{ "font-size": "16px", margin: 0, color: "#1e293b" }}>{isEditing() ? "メンバー情報の編集" : `${profile().name} の配下に部下を追加`}</h3>
+                </div>
+                <div class="modal-body" style={{ cursor: "default" }}>
+                  <div class="input-group"><label>名前</label><input ref={editName} value={isEditing() ? profile().name : ""} placeholder="名前" /></div>
+                  <div class="input-group"><label>役職 / 職種</label><input ref={editRole} value={isEditing() ? profile().role : ""} placeholder="役職名" /></div>
+                  <div class="input-group"><label>メールアドレス</label><input ref={editEmail} value={isEditing() ? (profile().email || "") : ""} placeholder="example@email.com" /></div>
+                  <div class="input-group"><label>自己紹介 / 業務内容</label><textarea ref={editBio} value={isEditing() ? (profile().bio || "") : ""} placeholder="担当している業務など" /></div>
+                  <div class="btn-row">
+                    <button class="btn-secondary" onClick={() => { setIsEditing(false); setIsAddingChild(false); }}>キャンセル</button>
+                    <button class="btn-primary" onClick={() => {
+                      const path = findStorePath(chartData, profile().id); if (!path) return;
+                      if (isEditing()) {
+                        (setChartData as any)(...path, { name: editName.value, role: editRole.value, email: editEmail.value, bio: editBio.value });
+                        setActiveProfile(null); setModalPos({ x: 0, y: 0 });
+                      } else {
+                        const targetObj = path.reduce((obj, key) => obj[key], chartData as any);
+                        const newChild = { id: "node_" + Date.now(), name: editName.value || "新規メンバー", role: editRole.value || "役職未定", level: profile().level + 1, email: editEmail.value, bio: editBio.value };
+                        (setChartData as any)(...path, "children", [...(targetObj.children || []), newChild]);
+                        const next = new Set(expandedNodes()); next.add(profile().id); setExpandedNodes(next);
+                        setIsAddingChild(false); setActiveProfile(null); setModalPos({ x: 0, y: 0 });
+                      }
+                    }}>確定</button>
+                  </div>
+                </div>
+              </Show>
+            </div>
+          </div>
+        );
+      }}
+    </Show>
+  );
+}
+// 8. メインエントリコンポーネント（全体を組み立てる最外殻）
+export default function OrgChart9() {
+  return (
+    <div class="org-chart-wrapper-top">
+      {/* 綺麗につなぎ目を処理したCSS記述ベース */}
+      <style>{`
+        .org-chart-wrapper-top { padding: 40px; background-color: #f8fafc; min-height: 100vh; font-family: sans-serif; overflow-x: auto; 
+          /* 🔥 追加：メインページへのぼかし処理を強制的に「無し」に固定する */
+	  /*
+          filter: none !important; 
+          backdrop-filter: none !important; 
+	  */
+	}
+        .org-node-container-top { display: flex; align-items: flex-start; position: relative; }
+        
+        /* カードのスタイル（高さ固定） */
+        .org-card-top { background: #ffffff; border-radius: 8px; padding: 12px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; min-width: 180px; height: 52px; display: flex; flex-direction: column; justify-content: center; transition: all 0.2s; z-index: 2; user-select: none; cursor: pointer; }
+        .org-card-top:hover { transform: translateX(2px); box-shadow: 0 6px 16px rgba(59, 130, 246, 0.15); border-color: #3b82f6; }
+        
+        /* 子ノードがある場合の左縦線マーク */
+        .org-card-top.has-children { border-left: 4px solid #3b82f6; }
+        
+        .org-role-top { font-size: 11px; font-weight: 600; color: #3b82f6; letter-spacing: 0.5px; margin-bottom: 2px; }
+        .org-name-top { font-size: 14px; font-weight: bold; color: #1e293b; display: flex; justify-content: space-between; align-items: center; }
+        .org-toggle-btn { background: #ffffff; border: 1px solid #ffffff; border-radius: 4px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; color: #64748b; padding: 0; }
+        
+        /* 隙間なく直角に曲がる接続線ロジック */
+        .org-line-right-top { width: 24px; height: 2px; background-color: #cbd5e1; margin-top: 38px; flex-shrink: 0; }
+        .org-children-container-top { display: flex; flex-direction: column; position: relative; padding-left: 24px; gap: 16px; }
+        .org-children-container-top::before { content: ''; position: absolute; top: 38px; bottom: 0; left: 0; width: 2px; background-color: #cbd5e1; z-index: 1; }
+        .org-children-container-top > .org-node-container-top::after { content: ''; position: absolute; left: -24px; top: 38px; width: 24px; height: 2px; background-color: #cbd5e1; z-index: 1; }
+        .org-children-container-top > .org-node-container-top:last-child::before { content: ''; position: absolute; left: -26px; top: 40px; bottom: -16px; width: 4px; background-color: #f8fafc; z-index: 2; }
+
+        /* モーダルUI */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(15, 23, 42, 0.4); 
+	/*backdrop-filter: blur(4px); */
+	display: flex; align-items: center; justify-content: center; z-index: 999; }
+        .modal-content { background: #ffffff; border-radius: 16px; padding: 32px; width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); position: relative; user-select: none; }
+        .modal-close-btn { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; }
+        .modal-header { border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px; pointer-events: none; /* ヘッダーの文字選択を抑制してドラッグしやすく */ }
+        .modal-role { font-size: 12px; font-weight: 600; color: #3b82f6; }
+        .modal-name { font-size: 20px; margin: 4px 0 0 0; color: #1e293b; }
+        .info-group, .input-group { margin-bottom: 16px; }
+        .info-group label, .input-group label { font-size: 11px; font-weight: bold; color: #94a3b8; display: block; margin-bottom: 4px; }
+        .info-group p { margin: 0; font-size: 14px; color: #334155; }
+        .bio-text { line-height: 1.6; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #f1f5f9; }
+        
+        /* 入力フォーム・ボタン */
+        .input-group input, .input-group textarea { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        .input-group textarea { height: 70px; resize: none; }
+        .btn-row { display: flex; gap: 8px; margin-top: 20px; }
+        .btn-primary, .btn-secondary, .btn-danger { padding: 8px 16px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; border: none; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-secondary { background: #e2e8f0; color: #334155; }
+        .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-danger { background: #ef4444; color: white; }
+      `}</style>
+
+      {/* 体制図の描画 */}
+      <div style={{ display: "flex", "align-items": "flex-start" }}>
+        <OrgChartNode node={chartData} />
+      </div>
+
+      {/* ポップアップモーダル */}
+      <ProfileModal />
+    </div>
+  );
+}
+

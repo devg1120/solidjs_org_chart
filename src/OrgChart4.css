@@ -1,0 +1,181 @@
+/* 全体レイアウト */
+.org-wrapper {
+  padding: 40px 20px;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background-color: #f8fafc;
+  min-height: 100vh;
+}
+.org-title {
+  text-align: center;
+  color: #1e293b;
+  margin-bottom: 40px;
+}
+.org-container {
+  display: flex;
+  justify-content: flex-start;
+  overflow-x: auto;
+  padding: 20px;
+}
+
+/* ツリー構造のベース (横型・上詰め) */
+.org-ul {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: 30px;
+  margin: 0;
+  list-style-type: none;
+}
+.org-li {
+  position: relative;
+  padding: 10px 0 10px 30px;
+  display: flex;
+  align-items: flex-start; /* 上詰めアライメント */
+}
+
+/* ツリーの接続線 (横型・上詰め対応) */
+.org-li::before, .org-li::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  border-left: 2px solid #cbd5e1;
+  width: 30px;
+  height: 100%;
+}
+.org-li::after {
+  top: 32px; /* カードの中心線(高さ64pxの半分)に固定 */
+  bottom: auto;
+  border-top: 2px solid #cbd5e1;
+}
+
+/* 不要な線の削除と角の丸み調整 */
+.org-li:only-child::after, .org-li:only-child::before {
+  display: none;
+}
+.org-li:only-child {
+  padding-left: 0;
+}
+.org-li:first-child::before, .org-li:last-child::after {
+  border: 0 none;
+}
+.org-li:first-child::after {
+  border-radius: 5px 0 0 0;
+}
+.org-li:last-child::before {
+  height: 32px; /* 最後のノードは線が突き抜けないようカードの中心で止める */
+  border-bottom: 0 none;
+}
+
+/* 親ノードから右側へ伸びる線 */
+.org-ul::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 32px;
+  border-top: 2px solid #cbd5e1;
+  width: 30px;
+  height: 0;
+}
+
+/* カードコンテナ */
+.org-card-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+/* モダンなカードデザイン */
+.org-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  padding: 16px;
+  width: 220px;
+  box-sizing: border-box;
+  height: 64px; /* 高さを64pxに固定することで線のズレを防止 */
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.org-card:hover {
+  transform: translateX(2px);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+.org-card-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  height: 100%;
+}
+
+/* アバター画像・フォールバック */
+.org-avatar, .org-avatar-fallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.org-avatar-fallback {
+  background-color: #6366f1;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+/* テキスト情報 */
+.org-info {
+  flex: 1;
+  min-width: 0;
+}
+.org-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.org-role {
+  margin: 2px 0 0 0;
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 開閉（折りたたみ）ボタン */
+.org-toggle-btn {
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.05);
+  z-index: 10;
+}
+.org-toggle-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
