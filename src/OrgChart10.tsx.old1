@@ -54,7 +54,6 @@ export const [chartData, setChartData] = createStore<OrgNode>(initialOrgData);
 export const [activeProfile, setActiveProfile] = createSignal<OrgNode | null>(null);
 export const [isEditing, setIsEditing] = createSignal(false);
 export const [isAddingChild, setIsAddingChild] = createSignal(false);
-export const [isSetParent, setIsSetParent] = createSignal(false);
 
 
 // 💡 モーダルが閉じたりデータが動いても、開閉した状態を完全に維持するためのSetシグナル
@@ -288,36 +287,6 @@ export function ProfileModal() {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
   };
-  const [selectedOrgIds, setSelectedOrgIds] = createSignal<Set<string>>(new Set());
-
-  // 選択・解除を切り替えるハンドラー
-  const handleSelectOrg = (id: string) => {
-    const single_select = true;
-
-    if (single_select) {
-        let next = new Set(selectedOrgIds());
-        if (next.has(id)) {
-          next.delete(id);
-        } else {
-          next = new Set([id]);
-        }
-       setSelectedOrgIds(next);
-        console.log("org tree select next", selectedOrgIds());
-
-    } else {
-    
-        const next = new Set(selectedOrgIds());
-        if (next.has(id)) {
-          next.delete(id);
-        } else {
-          next.add(id);
-        }
-        setSelectedOrgIds(next);
-        console.log("org tree select next", selectedOrgIds());
-    
-    }
-    
-  };
 
   return (
     <Show when={activeProfile()}>
@@ -339,7 +308,7 @@ export function ProfileModal() {
               <button class="modal-close-btn" onClick={() => { setActiveProfile(null); setModalPos({ x: 0, y: 0 }); }}>×</button>
               
               {/* 【A】閲覧モード */}
-              <Show when={!isEditing() && !isAddingChild() && !isSetParent()}>
+              <Show when={!isEditing() && !isAddingChild()}>
                 <div class="modal-header">
                   <div>
                     <span class="modal-role">{profile().role}</span>
@@ -393,8 +362,7 @@ export function ProfileModal() {
                     </Show>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button class="btn-primary" onClick={() => setIsEditing(true)}>編集</button>
-                      <button class="btn-primary" onClick={() => setIsSetParent(true)}>所属切替</button>
-                      <button class="btn-primary" onClick={() => setIsAddingChild(true)}>メンバ	追加</button>
+                      <button class="btn-primary" onClick={() => setIsAddingChild(true)}>部下を追加</button>
                       <button class="btn-primary" onClick={() => { setActiveProfile(null); setModalPos({ x: 0, y: 0 }); }}>終了</button>
                     </div>
                   </div>
@@ -427,34 +395,6 @@ export function ProfileModal() {
                         //setIsAddingChild(false); setActiveProfile(null); setModalPos({ x: 0, y: 0 });
                         setIsEditing(false);setIsAddingChild(false); 
                       }
-                    }}>確定</button>
-                  </div>
-                </div>
-              </Show>
-              {/* 【C】所属変更モード */}
-              <Show when={isSetParent()}>
-                <div class="modal-header">
-                  <h3 style={{ "font-size": "16px", margin: 0, color: "#1e293b" }}> {profile().name}  " 所属の編集" </h3>
-                </div>
-                <div class="modal-body" style={{ cursor: "default" }}>
-
-		  {/*    ORG TREE   */}
-      <h3>TREE</h3>
-      <div style={{ border: "1px solid #ccc", padding: "12px", "border-radius": "4px", "max-width": "300px" }}>
-        <For each={[chartData]}>
-          {(node) => (
-            <TreeItem
-              node={node}
-              selectedIds={selectedOrgIds}
-              onSelect={handleSelectOrg}
-            />
-          )}
-        </For>
-      </div>
-
-                  <div class="btn-row">
-                    <button class="btn-secondary" onClick={() => { setIsSetParent(false);  }}>キャンセル</button>
-                    <button class="btn-primary" onClick={() => { setIsSetParent(false); 
                     }}>確定</button>
                   </div>
                 </div>
