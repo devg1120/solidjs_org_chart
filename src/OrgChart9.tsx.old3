@@ -1,4 +1,4 @@
-import { For, createSignal, createEffect, Show } from "solid-js";
+import { For, createSignal, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 
 // 1. 体制図のデータ型定義
@@ -55,7 +55,6 @@ export const [activeProfile, setActiveProfile] = createSignal<OrgNode | null>(nu
 export const [isEditing, setIsEditing] = createSignal(false);
 export const [isAddingChild, setIsAddingChild] = createSignal(false);
 
-
 // 💡 モーダルが閉じたりデータが動いても、開閉した状態を完全に維持するためのSetシグナル
 //export const [expandedNodes, setExpandedNodes] = createSignal<Set<string>>(new Set(["1"]));
 export const [expandedNodes, setExpandedNodes] = createSignal<Set<string>>(new Set(["1", "2","3"]));
@@ -74,20 +73,6 @@ export const findStorePath = (node: any, targetId: string, currentPath: string[]
   return null;
 };
 
-
-export const [activeNode, setActiveNode] = createSignal<OrgNode | null>(null);
-createEffect(() => {
-     if (activeProfile()) {
-         setActiveNode(activeProfile)
-	 console.log("select")
-	 //activeNode().classList.add('active')
-     } else {
-         setActiveNode(null)
-	 console.log("not select")
-	 //activeNode().classList.remove('active')
-     }
-});
-
 // 5. ターゲットのノードが兄弟間で何番目にいるか、総数はいくつかを取得する関数
 export const getSiblingsInfo = (targetId: string) => {
   const path = findStorePath(chartData, targetId);
@@ -104,12 +89,6 @@ export const getSiblingsInfo = (targetId: string) => {
 // 6. 体制図の各ノードをレンダリングする再帰コンポーネント
 export function OrgChartNode(props: { node: OrgNode }) {
   const hasChildren = () => props.node.children && props.node.children.length > 0;
-  const isActive = () =>  {
-     if (activeNode()) {
-       return props.node.id ==  activeNode().id;
-     }
-       return false;
-     }
   
   // レベル2以下かつグローバル配列にIDが登録されていなければ「閉じている」と判定
  // const isCurrentlyOpen = () => props.node.level !== 2 || expandedNodes().has(props.node.id);
@@ -122,9 +101,7 @@ const isCurrentlyOpen = () => {
 };
 
   return (
-    <div class="org-node-container-top"
-        classList={{  "active-node" : isActive()}} 
-    >
+    <div class="org-node-container-top">
       {/* カード部分：子要素持ち（has-children）の場合は左側に青い縦線マークを表示 */}
       <div 
         class="org-card-top" 
@@ -376,7 +353,6 @@ export default function OrgChart9() {
         .btn-secondary { background: #e2e8f0; color: #334155; }
         .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
         .btn-danger { background: #ef4444; color: white; }
-	.active-node { border: solid 2px red; border-radius: 8px;}
       `}</style>
 
       {/* 体制図の描画 */}

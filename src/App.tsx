@@ -13,7 +13,8 @@ import   OrgChart6   from'./OrgChart6'
 import   OrgChart7   from'./OrgChart7'
 import   OrgChart8   from'./OrgChart8'
 */
-import   OrgChart9   from'./OrgChart9'
+//import   OrgChart9   from'./OrgChart9'
+import   OrgChart10   from'./OrgChart10'
 
 function App() {
 
@@ -26,7 +27,7 @@ function App() {
      <OrgChart4/>
      <OrgChart5/>
      */}
-     <OrgChart9/>
+     <OrgChart10/>
      {/*
      <OrgChart8/>
      <OrgChart7/>
