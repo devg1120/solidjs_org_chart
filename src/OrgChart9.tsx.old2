@@ -221,8 +221,7 @@ export function ProfileModal() {
                           onClick={() => {
                             const p = sib(); const list = [...p.parentPath.reduce((obj, key) => obj[key], chartData as any).children];
                             const [m] = list.splice(p.index, 1); list.splice(p.index - 1, 0, m);
-                            //(setChartData as any)(...p.parentPath, "children", list); setActiveProfile(null); setModalPos({ x: 0, y: 0 });
-                            (setChartData as any)(...p.parentPath, "children", list);  
+                            (setChartData as any)(...p.parentPath, "children", list); setActiveProfile(null); setModalPos({ x: 0, y: 0 });
                           }}
                         >
                           ▲ 上に移動
@@ -232,8 +231,7 @@ export function ProfileModal() {
                           onClick={() => {
                             const p = sib(); const list = [...p.parentPath.reduce((obj, key) => obj[key], chartData as any).children];
                             const [m] = list.splice(p.index, 1); list.splice(p.index + 1, 0, m);
-                            //(setChartData as any)(...p.parentPath, "children", list); setActiveProfile(null); setModalPos({ x: 0, y: 0 });
-                            (setChartData as any)(...p.parentPath, "children", list); 
+                            (setChartData as any)(...p.parentPath, "children", list); setActiveProfile(null); setModalPos({ x: 0, y: 0 });
                           }}
                         >
                           ▼ 下に移動
@@ -252,9 +250,8 @@ export function ProfileModal() {
                       }}>削除</button>
                     </Show>
                     <div style={{ display: "flex", gap: "8px" }}>
-                      <button class="btn-primary" onClick={() => setIsEditing(true)}>編集</button>
+                      <button class="btn-secondary" onClick={() => setIsEditing(true)}>編集</button>
                       <button class="btn-primary" onClick={() => setIsAddingChild(true)}>部下を追加</button>
-                      <button class="btn-primary" onClick={() => { setActiveProfile(null); setModalPos({ x: 0, y: 0 }); }}>終了</button>
                     </div>
                   </div>
                 </div>
@@ -276,15 +273,13 @@ export function ProfileModal() {
                       const path = findStorePath(chartData, profile().id); if (!path) return;
                       if (isEditing()) {
                         (setChartData as any)(...path, { name: editName.value, role: editRole.value, email: editEmail.value, bio: editBio.value });
-                        //setActiveProfile(null); setModalPos({ x: 0, y: 0 });
-                        setIsEditing(false);setIsAddingChild(false); 
+                        setActiveProfile(null); setModalPos({ x: 0, y: 0 });
                       } else {
                         const targetObj = path.reduce((obj, key) => obj[key], chartData as any);
                         const newChild = { id: "node_" + Date.now(), name: editName.value || "新規メンバー", role: editRole.value || "役職未定", level: profile().level + 1, email: editEmail.value, bio: editBio.value };
                         (setChartData as any)(...path, "children", [...(targetObj.children || []), newChild]);
                         const next = new Set(expandedNodes()); next.add(profile().id); setExpandedNodes(next);
-                        //setIsAddingChild(false); setActiveProfile(null); setModalPos({ x: 0, y: 0 });
-                        setIsEditing(false);setIsAddingChild(false); 
+                        setIsAddingChild(false); setActiveProfile(null); setModalPos({ x: 0, y: 0 });
                       }
                     }}>確定</button>
                   </div>
