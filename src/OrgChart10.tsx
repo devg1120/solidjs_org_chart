@@ -657,8 +657,7 @@ export function ProfileModal() {
                 <div class="modal-body" style={{ cursor: "default" }}>
 
 		  {/*    ORG TREE   */}
-      <h3>TREE</h3>
-      <div style={{ border: "1px solid #ccc", padding: "12px", "border-radius": "4px", "max-width": "300px" }}>
+      <div style={{ border: "1px solid #ccc", padding: "12px", "border-radius": "4px", "height": "200px", "overflow": "auto","max-width": "350px" }}>
         <For each={[chartData]}>
           {(node) => (
             <TreeItem
