@@ -1,5 +1,6 @@
 import { For, createSignal, createEffect, Show } from "solid-js";
 import { createStore } from "solid-js/store";
+import { mergeProps } from "solid-js";
 
 // 1. 体制図のデータ型定義
 export type OrgNode = {
@@ -246,9 +247,14 @@ const TreeItem: Component<{
   node: TreeNode;
   selectedIds: () => Set<string>;
   onSelect: (id: string) => void;
-}> = (props) => {
+  open:boolean ;
+}> = (_props) => {
+
+    const props = mergeProps({ open: false }, _props);
+
   // 各ノードごとに開閉状態を管理（SolidJSの細粒度なリアクティビティが活きる部分です）
-  const [isOpen, setIsOpen] = createSignal(false);
+  //const [isOpen, setIsOpen] = createSignal(false);
+  const [isOpen, setIsOpen] = createSignal(props.open);
 
   // 子要素を持っているか
   const hasChildren = () => props.node.children && props.node.children.length > 0;
@@ -320,6 +326,7 @@ const TreeItem: Component<{
               node={child}
               selectedIds={props.selectedIds}
               onSelect={props.onSelect}
+              open={props.open}
             />
           )}
         </For>
@@ -456,13 +463,27 @@ export function ProfileModal() {
         const now_parent = findParentNodeById(chartData, profile().id)
 
 	const new_parent_id = [...selectedOrgIds()][0];
-        if (now_parent.id === new_parent_id ) return;
+        if (now_parent.id === new_parent_id ) {
+	  //alert("current same parent id")
+	  return;
+	}
+        if (profile().id === new_parent_id ) {
+	  handleSelectOrg(now_parent.id)
+	  alert("new parent is self id")
+	  return;
+	}
 
         console.log("changeParent", now_parent.id, "=>", new_parent_id, profile());
 
 	const updatedOrgChart = moveOrgNode(chartData, profile().id, new_parent_id);
 	console.dir(updatedOrgChart)
 	setChartData(updatedOrgChart)
+
+         const next = new Set(expandedNodes());
+         if (!next.has(new_parent_id)) {
+	   next.add(new_parent_id);
+           setExpandedNodes(next);
+	 }
 
   }
 
@@ -629,6 +650,7 @@ export function ProfileModal() {
               node={node}
               selectedIds={selectedOrgIds}
               onSelect={handleSelectOrg}
+              open={true}
             />
           )}
         </For>
@@ -755,6 +777,7 @@ export default function OrgChart9() {
               node={node}
               selectedIds={selectedIds}
               onSelect={handleSelect}
+              open={true}
             />
           )}
         </For>
