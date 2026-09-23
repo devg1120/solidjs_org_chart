@@ -456,6 +456,19 @@ export function ProfileModal() {
 */
   const [selectedOrgIds, setSelectedOrgIds] = createSignal<Set<string>>(new Set());
 
+  const parentNodeExpand = (id) => {
+         const next = new Set(expandedNodes());
+         if (!next.has(id)) {
+	   next.add(id);
+           setExpandedNodes(next);
+	 }
+        const parent = findParentNodeById(chartData, id)
+	console.log("parent", parent)
+	if(parent) {
+          parentNodeExpand(parent.id) 
+	}
+  }
+
   const changeParent = (profile: any) => {
         if (selectedOrgIds().size == 0) return;
 
@@ -478,12 +491,14 @@ export function ProfileModal() {
 	const updatedOrgChart = moveOrgNode(chartData, profile().id, new_parent_id);
 	console.dir(updatedOrgChart)
 	setChartData(updatedOrgChart)
-
+/*
          const next = new Set(expandedNodes());
          if (!next.has(new_parent_id)) {
 	   next.add(new_parent_id);
            setExpandedNodes(next);
 	 }
+*/
+         parentNodeExpand(new_parent_id) 
 
   }
 
