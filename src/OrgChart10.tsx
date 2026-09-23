@@ -12,6 +12,159 @@ export type OrgNode = {
   children?: OrgNode[];
 };
 
+//① 特定のIDを持つノードを検索する（深さ優先探索: DFS）階層データを探索し、一致する id を持つオブジェクトを返します。
+function findNodeById(node: OrgNode, targetId: string): OrgNode | null {
+  if (node.id === targetId) {
+    return node;
+  }
+
+  if (node.children) {
+    for (const child of node.children) {
+      const found = findNodeById(child, targetId);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}
+
+
+//特定のIDを持つノードの親ノード（一つ上の階層のノード）を検索
+function findParentNodeById(
+  currentNode: OrgNode,
+  targetId: string
+): OrgNode | null {
+  // console.log(targetId);
+  // ルートノード自身が対象の場合、親はいないのでnull
+  if (currentNode.id === targetId) {
+    return null;
+  }
+
+  // 子ノードの中に、ターゲットのIDを持つノードがあるかチェック
+  if (currentNode.children) {
+    for (const child of currentNode.children) {
+      //console.log(">",child.id , targetId) 
+      if (child.id === targetId) {
+        return currentNode; // 見つかったら自身（親）を返す
+      }
+      
+      // さらに深い階層を再帰的に探索
+      const parent = findParentNodeById(child, targetId);
+      if (parent) {
+        return parent;
+      }
+    }
+  }
+  // console.log("un match")
+  return null;
+}
+
+//特定のノードを別のノードの配下へ移動
+function moveOrgNode(
+  root: OrgNode,
+  movingNodeId: string,
+  targetParentId: string
+): OrgNode {
+  // 1. 破壊的変更を防ぐため、一度ディープコピーを作成（推奨）
+  const rootCopy = JSON.parse(JSON.stringify(root)) as OrgNode;
+
+  // 2. 移動対象のノードとその「元の親」を見つける
+  let movingNode: OrgNode | null = null;
+  let originalParent: OrgNode | null = null;
+
+  function findMovingNodeAndParent(currentNode: OrgNode): boolean {
+    if (currentNode.id === movingNodeId) {
+      movingNode = currentNode;
+      return true;
+    }
+    if (currentNode.children) {
+      for (const child of currentNode.children) {
+        if (child.id === movingNodeId) {
+          movingNode = child;
+          originalParent = currentNode;
+          return true;
+        }
+        if (findMovingNodeAndParent(child)) return true;
+      }
+    }
+    return false;
+  }
+  findMovingNodeAndParent(rootCopy);
+
+  // 対象ノードが存在しない場合は、何もせずそのまま返す
+  if (!movingNode) {
+    console.error("移動対象のノードが見つかりません");
+    return rootCopy;
+  }
+
+  // 3. 移動先の「新しい親ノード」を見つける
+  let newParentNode: OrgNode | null = null;
+  function findNewParent(currentNode: OrgNode): boolean {
+    if (currentNode.id === targetParentId) {
+      newParentNode = currentNode;
+      return true;
+    }
+    if (currentNode.children) {
+      for (const child of currentNode.children) {
+        if (findNewParent(child)) return true;
+      }
+    }
+    return false;
+  }
+  findNewParent(rootCopy);
+
+  if (!newParentNode) {
+    console.error("移動先の親ノードが見つかりません");
+    return rootCopy;
+  }
+
+  // ループ防止バリデーション：移動先が、移動対象ノード自身またはその子孫である場合はエラー
+  function isDescendant(parent: OrgNode, targetId: string): boolean {
+    if (parent.id === targetId) return true;
+    if (parent.children) {
+      for (const child of parent.children) {
+        if (isDescendant(child, targetId)) return true;
+      }
+    }
+    return false;
+  }
+  if (isDescendant(movingNode, targetParentId)) {
+    console.error("自分自身または自身の子孫ノードへは移動できません");
+    return rootCopy;
+  }
+
+  // 4. 元の親から削除する
+  if (originalParent && originalParent.children) {
+    originalParent.children = originalParent.children.filter(
+      (child) => child.id !== movingNodeId
+    );
+  } else if (rootCopy.id === movingNodeId) {
+    console.error("ルートノード自体を移動することはできません");
+    return rootCopy;
+  }
+
+  // 5. 新しい親に追加する（levelも新しい親の level + 1 に更新）
+  if (!newParentNode.children) {
+    newParentNode.children = [];
+  }
+  
+  // 移動するノードとその子孫のlevelを再帰的に更新するヘルパー
+  function updateLevels(node: OrgNode, newLevel: number) {
+    node.level = newLevel;
+    if (node.children) {
+      for (const child of node.children) {
+        updateLevels(child, newLevel + 1);
+      }
+    }
+  }
+  
+  updateLevels(movingNode, newParentNode.level + 1);
+  newParentNode.children.push(movingNode);
+
+  return rootCopy;
+}
+
+
 // 2. 提供いただいたベースデータ
 const initialOrgData: OrgNode = {
   id: "1",
@@ -288,7 +441,30 @@ export function ProfileModal() {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
   };
+/*
+  const getParent_id = (id: string) => {
+        //console.dir(chartData.name)
+        return findParentNodeById(chartData, id);
+  }
+*/
   const [selectedOrgIds, setSelectedOrgIds] = createSignal<Set<string>>(new Set());
+
+  const changeParent = (profile: any) => {
+        if (selectedOrgIds().size == 0) return;
+
+        //console.log(profile())
+        const now_parent = findParentNodeById(chartData, profile().id)
+
+	const new_parent_id = [...selectedOrgIds()][0];
+        if (now_parent.id === new_parent_id ) return;
+
+        console.log("changeParent", now_parent.id, "=>", new_parent_id, profile());
+
+	const updatedOrgChart = moveOrgNode(chartData, profile().id, new_parent_id);
+	console.dir(updatedOrgChart)
+	setChartData(updatedOrgChart)
+
+  }
 
   // 選択・解除を切り替えるハンドラー
   const handleSelectOrg = (id: string) => {
@@ -302,7 +478,7 @@ export function ProfileModal() {
           next = new Set([id]);
         }
        setSelectedOrgIds(next);
-        console.log("org tree select next", selectedOrgIds());
+        //console.log("org tree select next", selectedOrgIds());
 
     } else {
     
@@ -313,7 +489,7 @@ export function ProfileModal() {
           next.add(id);
         }
         setSelectedOrgIds(next);
-        console.log("org tree select next", selectedOrgIds());
+        //console.log("org tree select next", selectedOrgIds());
     
     }
     
@@ -323,6 +499,10 @@ export function ProfileModal() {
     <Show when={activeProfile()}>
       {(profile) => {
         const sib = () => getSiblingsInfo(profile().id);
+        const now_parent = findParentNodeById(chartData, profile().id)
+        if (now_parent) {
+           handleSelectOrg(now_parent.id)
+	}
 
         return (
           <div class="modal-overlay" onClick={() => { setActiveProfile(null); setModalPos({ x: 0, y: 0 }); }}>
@@ -393,7 +573,9 @@ export function ProfileModal() {
                     </Show>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button class="btn-primary" onClick={() => setIsEditing(true)}>編集</button>
+                    <Show when={profile().id !== "1"}>
                       <button class="btn-primary" onClick={() => setIsSetParent(true)}>所属切替</button>
+                    </Show>
                       <button class="btn-primary" onClick={() => setIsAddingChild(true)}>メンバ	追加</button>
                       <button class="btn-primary" onClick={() => { setActiveProfile(null); setModalPos({ x: 0, y: 0 }); }}>終了</button>
                     </div>
@@ -454,7 +636,7 @@ export function ProfileModal() {
 
                   <div class="btn-row">
                     <button class="btn-secondary" onClick={() => { setIsSetParent(false);  }}>キャンセル</button>
-                    <button class="btn-primary" onClick={() => { setIsSetParent(false); 
+                    <button class="btn-primary" onClick={() => { setIsSetParent(false); changeParent(profile);
                     }}>確定</button>
                   </div>
                 </div>
@@ -483,7 +665,7 @@ export default function OrgChart9() {
           next = new Set([id]);
         }
        setSelectedIds(next);
-        console.log("tree select next", selectedIds());
+        //console.log("tree select next", selectedIds());
 
     } else {
     
@@ -494,7 +676,7 @@ export default function OrgChart9() {
           next.add(id);
         }
         setSelectedIds(next);
-        console.log("tree select next", selectedIds());
+        //console.log("tree select next", selectedIds());
     
     }
     
