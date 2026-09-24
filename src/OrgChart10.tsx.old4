@@ -13,21 +13,6 @@ export type OrgNode = {
   children?: OrgNode[];
 };
 
-function recursiveSetId(
-  currentNode: OrgNode,
-  id: string = "1"
-) {
-    //console.log("recursiveSetId", id, currentNode)
-    let number = 1
-    currentNode.id = id;
-    if ( currentNode.children ) {
-    for ( const c of currentNode.children ) {
-          recursiveSetId( c, id + "-" + String(number))
-	  number = number + 1
-    }
-    }
-}
-
 //① 特定のIDを持つノードを検索する（深さ優先探索: DFS）階層データを探索し、一致する id を持つオブジェクトを返します。
 function findNodeById(node: OrgNode, targetId: string): OrgNode | null {
   if (node.id === targetId) {
@@ -216,15 +201,12 @@ const initialOrgData: OrgNode = {
       bio: "新規クライアントの開拓と営業戦略の立案をリードしています。",
       children: [
         { id: "6", name: "渡辺 翔", role: "営業担当", level: 3, email: "s.watanabe@example.com", bio: "フットワークの軽さを活かした提案を心がけています。" },
-        { id: "8", box: false, on: "リモート", name: "横山 合", role: "営業担当", level: 3, email: "s.watanabe@example.com", bio: "フットワークの軽さを活かした提案を心がけています。" },
+        { id: "8", box: 1, on: "リモート", name: "横山 合", role: "営業担当", level: 3, email: "s.watanabe@example.com", bio: "フットワークの軽さを活かした提案を心がけています。" },
         { id: "9", name: "山口 完", role: "営業担当", level: 3, email: "s.watanabe@example.com", bio: "フットワークの軽さを活かした提案を心がけています。" },
       ],
     },
   ],
 };
-
-recursiveSetId(initialOrgData)
-const initExpandedNodes = new Set(["1", "1-1","1-2"]);
 
 // 3. グローバル状態管理 (State)
 export const [chartData, setChartData] = createStore<OrgNode>(initialOrgData);
@@ -236,8 +218,7 @@ export const [isSetParent, setIsSetParent] = createSignal(false);
 
 // 💡 モーダルが閉じたりデータが動いても、開閉した状態を完全に維持するためのSetシグナル
 //export const [expandedNodes, setExpandedNodes] = createSignal<Set<string>>(new Set(["1"]));
-//export const [expandedNodes, setExpandedNodes] = createSignal<Set<string>>(new Set(["1", "2","3"]));
-export const [expandedNodes, setExpandedNodes] = createSignal<Set<string>>(initExpandedNodes);
+export const [expandedNodes, setExpandedNodes] = createSignal<Set<string>>(new Set(["1", "2","3"]));
 
 // 💡 【新規】モーダルのドラッグ移動用の座標を管理するシグナル
 export const [modalPos, setModalPos] = createSignal({ x: 0, y: 0 });
@@ -390,18 +371,6 @@ export function OrgChartNode(props: { node: OrgNode }) {
      return false;
   }
 
-  const isChildOnLabel = () =>  {
-     if ( "children" in props.node ) {
-       if ( props.node.children.length > 0 ) {
-           if ( "on" in props.node.children[0] ) {
-             return true;
-           }
-        }
-     }
-
-     return false;
-  }
-
   const isBox = () =>  {
      // isUpperNodeOpen();
      if ( "box" in props.node ) {
@@ -519,8 +488,7 @@ const isCurrentlyOpen = () => {
   return (
     <div class="org-node-container-top"
         classList={{  "box" : isBox()}} 
-        classList={{  "margin-top" : !isBox() && !isUpperNodeOpen() && isOnLabel() }} 
-        classList={{  "margin-top" : !isBox() && !isUpperNodeOpen() && isChildOnLabel()}} 
+        classList={{  "margin-top" : !isBox() && !isUpperNodeOpen() && isOnLabel()}} 
     >
        <Show when={isBox() && isOnLabel()}>
              <div class="box-label">
@@ -921,10 +889,7 @@ export default function OrgChart9() {
         .org-children-container-top > .org-node-container-top::after { content: ''; position: absolute; left: -24px; top: 38px; width: 24px; height: 2px; background-color: #cbd5e1; z-index: 1; }
 
 	/* 左下はみ出し罫線を消す*/
-	/*
         .org-children-container-top > .org-node-container-top:last-child::before { content: ''; position: absolute; left: -26px; top: 40px; bottom: -16px; width: 4px; background-color: #f8fafc; z-index: 2; }
-	*/
-        .org-children-container-top > .org-node-container-top:last-child::before { content: ''; position: absolute; left: -30px; top: 40px; bottom: -16px; width: 8px; background-color: #f8fafc; z-index: 2; }
 
         /* モーダルUI */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(15, 23, 42, 0.4); 
