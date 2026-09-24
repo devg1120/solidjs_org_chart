@@ -1,0 +1,146 @@
+import { createSignal, For, Show } from "solid-js";
+
+export default function Slack() {
+  // 1. チャンネル一覧の状態
+  const [channels, setChannels] = createSignal([
+    { id: "general", name: "general" },
+    { id: "random", name: "random" },
+    { id: "solid-js", name: "solid-js" },
+  ]);
+
+  // 2. 現在選択されているチャンネルID
+  const [activeChannelId, setActiveChannelId] = createSignal("general");
+
+  // 3. メッセージデータの状態
+  const [messages, setMessages] = createSignal([
+    { id: 1, channelId: "general", user: "Alice", text: "こんにちは！" },
+    { id: 2, channelId: "general", user: "Bob", text: "SolidJSのサンプルです。" },
+    { id: 3, channelId: "random", user: "Alice", text: "雑談チャンネルです☕" },
+  ]);
+
+  // 4. 入力中のテキストの状態
+  const [inputText, setInputText] = createSignal("");
+
+  // 5. 選択中のチャンネルオブジェクトの取得（派生シグナル）
+  //const activeChannel = () => channels().find(c => c.id() === activeChannelId() || c.id === activeChannelId());
+  const activeChannel = () => channels().find(c => c.id === activeChannelId());
+
+
+  // 6. 選択中のチャンネルに属するメッセージのフィルタリング（派生シグナル）
+  const filteredMessages = () => messages().filter(m => m.channelId === activeChannelId());
+
+  // 7. メッセージ送信処理
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (!inputText().trim()) return;
+
+    const newMessage = {
+      id: Date.now(),
+      channelId: activeChannelId(),
+      user: "You", // 固定のユーザー名
+      text: inputText().trim(),
+    };
+
+    setMessages([...messages(), newMessage]);
+    setInputText(""); // 入力欄をクリア
+  };
+
+  return (
+    <div style={{ display: "flex", height: "100vh", "font-family": "sans-serif", color: "#1d1c1d" }}>
+      
+      {/* サイドバー (Slackの紫色 #4a154b風) */}
+      <aside style={{ width: "260px", "background-color": "#4a154b", color: "#bcabbc", padding: "16px", "display": "flex", "flex-direction": "column", "gap": "20px" }}>
+        <h2 style={{ color: "#ffffff", "margin-top": 0, "font-size": "18px" }}>Workspace</h2>
+        <div>
+          <h3 style={{ "font-size": "14px", "margin-bottom": "8px", "text-transform": "uppercase", "letter-spacing": "0.5px" }}>チャンネル</h3>
+          <ul style={{ "list-style": "none", padding: 0, margin: 0, "display": "flex", "flex-direction": "column", gap: "4px" }}>
+            <For each={channels()}>
+              {(channel) => (
+                <li>
+                  <button
+                    onClick={() => setActiveChannelId(channel.id)}
+                    style={{
+                      width: "100%",
+                      "text-align": "left",
+                      background: activeChannelId() === channel.id ? "#1164a3" : "transparent",
+                      color: activeChannelId() === channel.id ? "#ffffff" : "#bcabbc",
+                      border: "none",
+                      padding: "6px 12px",
+                      "border-radius": "6px",
+                      cursor: "pointer",
+                      "font-size": "15px",
+                    }}
+                  >
+                    # {channel.name}
+                  </button>
+                </li>
+              )}
+            </For>
+          </ul>
+        </div>
+      </aside>
+
+      {/* メインチャットエリア */}
+      <main style={{ flex: 1, display: "flex", "flex-direction": "column", "background-color": "#ffffff" }}>
+        
+        {/* ヘッダー */}
+        <header style={{ padding: "16px 24px", "border-bottom": "1px solid #e2e2e2" }}>
+          <h1 style={{ margin: 0, "font-size": "18px", "font-weight": "bold" }}>
+            # {activeChannel()?.name}
+          </h1>
+        </header>
+
+        {/* メッセージ履歴 */}
+        <div style={{ flex: 1, padding: "24px", overflowY: "auto", display: "flex", "flex-direction": "column", gap: "16px" }}>
+          <For each={filteredMessages()} fallback={<p style={{ color: "#868686" }}>まだメッセージはありません。</p>}>
+            {(msg) => (
+              <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
+                <div style={{ display: "flex", "align-items": "baseline", gap: "8px" }}>
+                  <span style={{ "font-weight": "bold", "font-size": "15px" }}>{msg.user}</span>
+                  <span style={{ "font-size": "12px", color: "#868686" }}>12:00 PM</span>
+                </div>
+                <div style={{ "font-size": "15px", "line-height": "1.5", color: "#1d1c1d" }}>{msg.text}</div>
+              </div>
+            )}
+          </For>
+        </div>
+
+        {/* メッセージ入力フォーム */}
+        <footer style={{ padding: "0 24px 24px 24px" }}>
+          <form onSubmit={handleSendMessage} style={{ display: "flex", border: "1px solid #868686", "border-radius": "8px", overflow: "hidden" }}>
+            <input
+              type="text"
+              value={inputText()}
+              onInput={(e) => setInputText(e.currentTarget.value)}
+              placeholder={`#${activeChannel()?.name} へのメッセージ`}
+              style={{
+                flex: 1,
+                border: "none",
+                padding: "12px",
+                "font-size": "15px",
+                outline: "none",
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                background: inputText().trim() ? "#007a5a" : "#e2e2e2",
+                color: inputText().trim() ? "#ffffff" : "#868686",
+                border: "none",
+                padding: "0 16px",
+                "font-weight": "bold",
+                cursor: inputText().trim() ? "pointer" : "default",
+                transition: "background 0.2s",
+              }}
+              disabled={!inputText().trim()}
+            >
+              送信
+            </button>
+          </form>
+        </footer>
+
+      </main>
+    </div>
+  );
+}
+
