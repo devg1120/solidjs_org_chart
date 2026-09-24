@@ -408,7 +408,60 @@ export function OrgChartNode(props: { node: OrgNode }) {
  
 };
 
+  const childCheck = (id: string) =>{
+    const node = findNodeById(id)
+    if( node.children)  {
+       if( node.children.length > 1) {
+             if (expandedNodes().has(node_id)) {
+                         return true
+	     } else {
+                 for ( c in node.children) {
+                   if (childCheck( c.id)) {
+		         return true
+		   }
+		}
+
+	     }
+
+       } else if( node.children.length == 1) {
+           if (childCheck( node.children[0])) {
+		         return true
+	   }
+
+       }
+    }
+    return false;
+  }
+
   const isUpperNodeOpen = () =>  {
+     //const data = getSiblingsInfo(props.node.id)
+     const data = getUpperNode(props.node.id)
+     if (data.index > 0) {
+       //console.log(props.node.id, "=>",  data.upnode_id,
+       //                       expandedNodes(),
+       //                       expandedNodes().has(data.upnode_id))
+        const open = expandedNodes().has(data.upnode_id)
+	if (props.node.id == "3"){
+	console.log("open", open)
+	}
+	if (open) {
+		   const check = childCheck(data.upnode_id)
+                  //return true  //child height 1ならば false
+                  if (check) {
+                     return true
+		  } else {
+                     return false
+		  }
+	} else {
+                  return false
+	}
+     }
+     // Top Level
+     return true
+
+  }
+  
+  const isUpperNodeOpen_ = () =>  {
      //const data = getSiblingsInfo(props.node.id)
      const data = getUpperNode(props.node.id)
      if (data.index > 0) {
