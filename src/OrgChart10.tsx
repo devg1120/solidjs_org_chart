@@ -179,6 +179,7 @@ const initialOrgData: OrgNode = {
     {
       id: "2",
       on: "開発部",
+      //box: true,
       name: "鈴木 次郎",
       role: "開発部長",
       level: 2,
@@ -371,6 +372,7 @@ export function OrgChartNode(props: { node: OrgNode }) {
   }
 
   const isBox = () =>  {
+     // isUpperNodeOpen();
      if ( "box" in props.node ) {
            return props.node.box;
      }
@@ -384,7 +386,42 @@ export function OrgChartNode(props: { node: OrgNode }) {
        return true;
      }
        return false;
+     };
+
+ const getUpperNode = (targetId: string) => {
+	
+  const path = findStorePath(chartData, targetId);
+  if (!path || path.length < 2) return { index: -1, total: 0, upnode: null };
+  const parentPath = path.slice(0, -2);
+  const parentObj = parentPath.reduce((obj, key) => obj[key], chartData as any);
+  const index =  parseInt(path[path.length - 1]);
+  const total = parentObj.children.length;
+  let upnode_id = null
+  if ( index > 0) {
+       upnode_id = parentObj.children[index -1].id
+  }
+  return {
+    index: index,
+    total: total,
+    upnode_id: upnode_id,
+  };
+ 
+};
+
+  const isUpperNodeOpen = () =>  {
+     //const data = getSiblingsInfo(props.node.id)
+     const data = getUpperNode(props.node.id)
+     if (data.index > 0) {
+       //console.log(props.node.id, "=>", data.index);
+       console.log(props.node.id, "=>",  data.upnode_id,
+                              expandedNodes(),
+                              expandedNodes().has(data.upnode_id))
+       return expandedNodes().has(data.upnode_id)
      }
+     // Top Level
+     return true
+
+  }
   // レベル2以下かつグローバル配列にIDが登録されていなければ「閉じている」と判定
  // const isCurrentlyOpen = () => props.node.level !== 2 || expandedNodes().has(props.node.id);
 
@@ -398,12 +435,18 @@ const isCurrentlyOpen = () => {
   return (
     <div class="org-node-container-top"
         classList={{  "box" : isBox()}} 
+        classList={{  "margin-top" : !isBox() && !isUpperNodeOpen() && isOnLabel()}} 
     >
        <Show when={isBox() && isOnLabel()}>
              <div class="box-label">
                   <p>{props.node.on}</p>
 	    </div>
        </Show>
+       {/*
+       <Show when={!isBox() && !isUpperNodeOpen() && isOnLabel()}>
+         <div class="gap">GAP</div>
+       </Show>
+      */}
        <Show when={!isBox() && isOnLabel()}>
              <div class="on-label">
                   <p>{props.node.on}</p>
@@ -833,6 +876,9 @@ export default function OrgChart9() {
 	  position: absolute; ; 
 	  top:-10px;
 	  left:14px;
+	}
+	.margin-top { 
+	   margin-top: 30px;
 	}
       `}</style>
 
