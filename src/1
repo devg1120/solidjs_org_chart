@@ -358,12 +358,6 @@ export function OrgChartNode(props: { node: OrgNode }) {
        return false;
      }
   
-  const isActive2 = () =>  {
-     if (props.node.id == "3"){
-       return true;
-     }
-       return false;
-     }
   // レベル2以下かつグローバル配列にIDが登録されていなければ「閉じている」と判定
  // const isCurrentlyOpen = () => props.node.level !== 2 || expandedNodes().has(props.node.id);
 
@@ -376,7 +370,7 @@ const isCurrentlyOpen = () => {
 
   return (
     <div class="org-node-container-top"
-        classList={{  "active-node2" : isActive2()}} 
+        classList={{  "active-node2" : isActive()}} 
     >
       {/* カード部分：子要素持ち（has-children）の場合は左側に青い縦線マークを表示 */}
       <div 
@@ -760,8 +754,6 @@ export default function OrgChart9() {
         .org-children-container-top { display: flex; flex-direction: column; position: relative; padding-left: 24px; gap: 16px; }
         .org-children-container-top::before { content: ''; position: absolute; top: 38px; bottom: 0; left: 0; width: 2px; background-color: #cbd5e1; z-index: 1; }
         .org-children-container-top > .org-node-container-top::after { content: ''; position: absolute; left: -24px; top: 38px; width: 24px; height: 2px; background-color: #cbd5e1; z-index: 1; }
-
-	/* 左下はみ出し罫線を消す*/
         .org-children-container-top > .org-node-container-top:last-child::before { content: ''; position: absolute; left: -26px; top: 40px; bottom: -16px; width: 4px; background-color: #f8fafc; z-index: 2; }
 
         /* モーダルUI */
@@ -788,13 +780,7 @@ export default function OrgChart9() {
         .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
         .btn-danger { background: #ef4444; color: white; }
 	.active-node { border: solid 2px red; border-radius: 8px;}
-	.active-node2 { 
-
-  border: 2px solid #333; /* 元のボーダー */
-	  padding: 20px;
-  
-   z-index:9;
-	}
+	.active-node2 { border: solid 10px lightgray; border-radius: 0px;}
       `}</style>
 
       {/* 体制図の描画 */}
