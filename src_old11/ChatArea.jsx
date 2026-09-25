@@ -187,28 +187,10 @@ export default function ChatArea(props) {
     if (ext === "pptx" || type.includes("presentation")) return "📙";
     return "📁";
   };
-/*
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    setAttachedFile({
-      name: file.name,
-      type: file.type,
-      url: URL.createObjectURL(file)
-    });
-  };
-*/
-  const handleFileChange = (e) => {
-    // filesオブジェクトを安全に取得
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const file = files[0];
-
-    // 💡 すでに古い添付ファイルURLがあれば、メモリ解放してから新しいURLを作る
-    if (attachedFile()?.url) {
-      URL.revokeObjectURL(attachedFile().url);
-    }
 
     setAttachedFile({
       name: file.name,
@@ -278,13 +260,7 @@ export default function ChatArea(props) {
               <div style={{ flex: 1, "font-size": "13px", "font-weight": "bold", overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" }}>
                 {attachedFile().name}
               </div>
-              <button type="button" onClick={() => {
-    if (attachedFile()?.url) {
-      URL.revokeObjectURL(attachedFile().url);
-    }
-    setAttachedFile(null);
-	      }}
-		      style={{ background: "#e2e2e2", border: "none", "border-radius": "50%", width: "20px", height: "20px", cursor: "pointer", "font-size": "12px" }}>✕</button>
+              <button type="button" onClick={() => setAttachedFile(null)} style={{ background: "#e2e2e2", border: "none", "border-radius": "50%", width: "20px", height: "20px", cursor: "pointer", "font-size": "12px" }}>✕</button>
             </div>
           </Show>
 

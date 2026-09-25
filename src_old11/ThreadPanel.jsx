@@ -160,29 +160,9 @@ export default function ThreadPanel(props) {
   };
   
   // 🛠️ 画像以外も受け付けられるようにファイル変更処理をアップグレード
-/*
   const handleThreadFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    props.onAttachedFileChange({
-      name: file.name,
-      type: file.type,
-      url: URL.createObjectURL(file)
-    });
-  };
-*/
-
-  // 🛠️ 画像以外も受け付けられるようにファイル変更処理をアップグレード
-  const handleThreadFileChange = (e) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const file = files[0];
-
-    // 💡 すでに古い添付URLがあれば事前にメモリを解放
-    if (props.attachedFile?.url) {
-      URL.revokeObjectURL(props.attachedFile.url);
-    }
 
     props.onAttachedFileChange({
       name: file.name,
@@ -287,13 +267,7 @@ export default function ThreadPanel(props) {
               <div style={{ flex: 1, "font-size": "12px", "font-weight": "bold", overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" }}>
                 {props.attachedFile.name}
               </div>
-              <button type="button" onClick={() =>{ 
-    if (props.attachedFile?.url) {
-      URL.revokeObjectURL(props.attachedFile.url);
-    }
-    props.onAttachedFileChange(null);
-
-	      }} style={{ background: "#e2e2e2", border: "none", "border-radius": "50%", width: "18px", height: "18px", cursor: "pointer", "font-size": "10px" }}>✕</button>
+              <button type="button" onClick={() => props.onAttachedFileChange(null)} style={{ background: "#e2e2e2", border: "none", "border-radius": "50%", width: "18px", height: "18px", cursor: "pointer", "font-size": "10px" }}>✕</button>
             </div>
           </Show>
 

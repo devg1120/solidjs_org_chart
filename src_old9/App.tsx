@@ -5,13 +5,13 @@
 
 
 import { createSignal } from 'solid-js'
-import   OrgChart10   from'./OrgChart10'
+import   Slack   from'./Slack'
 
 function App() {
 
   return (
     <>
-     <OrgChart10/>
+     <Slack/>
     </>
   )
 }

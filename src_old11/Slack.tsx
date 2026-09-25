@@ -196,25 +196,10 @@ export default function App() {
   };
 
   // 🛠️ メインメッセージの削除処理
-  /*
   const handleDeleteMessage = (messageId) => {
     setMessages(messages().filter(msg => msg.id !== messageId));
     
     // もし削除されたメッセージのスレッドが現在右側に開いていた場合は自動で閉じる
-    if (activeThreadParentId() === messageId) {
-      setActiveThreadParentId(null);
-    }
-  };
-  */
-  const handleDeleteMessage = (messageId) => {
-    const targetMsg = messages().find(msg => msg.id === messageId);
-    // 💡 削除されるメッセージにファイルがあれば、メモリから完全に解放
-    if (targetMsg?.file?.url) {
-      URL.revokeObjectURL(targetMsg.file.url);
-    }
-
-    setMessages(messages().filter(msg => msg.id !== messageId));
-    
     if (activeThreadParentId() === messageId) {
       setActiveThreadParentId(null);
     }
@@ -228,19 +213,7 @@ export default function App() {
   };
 
   // 🛠️ スレッド（返信）メッセージの削除処理
-  /*
   const handleDeleteReply = (replyId) => {
-    setThreadMessages(threadMessages().filter(reply => reply.id !== replyId));
-  };
-  */
-
-  const handleDeleteReply = (replyId) => {
-    const targetReply = threadMessages().find(reply => reply.id === replyId);
-    // 💡 削除される返信にファイルがあれば、メモリから完全に解放
-    if (targetReply?.file?.url) {
-      URL.revokeObjectURL(targetReply.file.url);
-    }
-
     setThreadMessages(threadMessages().filter(reply => reply.id !== replyId));
   };
 

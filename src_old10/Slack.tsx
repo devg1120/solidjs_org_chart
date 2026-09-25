@@ -196,7 +196,6 @@ export default function App() {
   };
 
   // 🛠️ メインメッセージの削除処理
-  /*
   const handleDeleteMessage = (messageId) => {
     setMessages(messages().filter(msg => msg.id !== messageId));
     
@@ -205,45 +204,6 @@ export default function App() {
       setActiveThreadParentId(null);
     }
   };
-  */
-  const handleDeleteMessage = (messageId) => {
-    const targetMsg = messages().find(msg => msg.id === messageId);
-    // 💡 削除されるメッセージにファイルがあれば、メモリから完全に解放
-    if (targetMsg?.file?.url) {
-      URL.revokeObjectURL(targetMsg.file.url);
-    }
-
-    setMessages(messages().filter(msg => msg.id !== messageId));
-    
-    if (activeThreadParentId() === messageId) {
-      setActiveThreadParentId(null);
-    }
-  };
-
-  // 🛠️ スレッド（返信）メッセージの編集処理
-  const handleEditReply = (replyId, newText) => {
-    setThreadMessages(threadMessages().map(reply => 
-      reply.id === replyId ? { ...reply, text: newText, isEdited: true } : reply
-    ));
-  };
-
-  // 🛠️ スレッド（返信）メッセージの削除処理
-  /*
-  const handleDeleteReply = (replyId) => {
-    setThreadMessages(threadMessages().filter(reply => reply.id !== replyId));
-  };
-  */
-
-  const handleDeleteReply = (replyId) => {
-    const targetReply = threadMessages().find(reply => reply.id === replyId);
-    // 💡 削除される返信にファイルがあれば、メモリから完全に解放
-    if (targetReply?.file?.url) {
-      URL.revokeObjectURL(targetReply.file.url);
-    }
-
-    setThreadMessages(threadMessages().filter(reply => reply.id !== replyId));
-  };
-
   return (
     <div style={{ display: "flex", height: "100vh", "font-family": "sans-serif", color: "#1d1c1d", overflow: "hidden" }}>
       {/* 1. サイドバー（可変幅 props 伝達） */}
@@ -302,8 +262,6 @@ export default function App() {
           onReactToThread={handleReactToThread}
           onReactToParent={(emoji) => handleReactToMain(activeThreadParentId(), emoji)}
           onClose={() => setActiveThreadParentId(null)}
-          onEditReply={handleEditReply}  
-          onDeleteReply={handleDeleteReply}
         />
       </Show>
     </div>

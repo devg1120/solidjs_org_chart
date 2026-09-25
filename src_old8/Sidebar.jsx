@@ -3,8 +3,7 @@ import { For } from "solid-js";
 export default function Sidebar(props) {
   return (
     <aside style={{ 
-      width: `${props.width}px`, // 🛠️ 固定値から props.width に変更
-
+      width: "240px", 
       "background-color": "#4a154b", 
       color: "#bcabbc", 
       padding: "16px", 

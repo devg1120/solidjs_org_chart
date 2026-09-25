@@ -4,7 +4,6 @@ import ChatArea from "./ChatArea";
 import ThreadPanel from "./ThreadPanel";
 
 export default function App() {
-  // 初期チャンネルデータ
   const [channels] = createSignal([
     { id: "general", name: "general" },
     { id: "random", name: "random" },
@@ -12,111 +11,75 @@ export default function App() {
 
   const [activeChannelId, setActiveChannelId] = createSignal("general");
 
-  // --- 🛠️ ズレのない差分リサイズ用ロジック ---
-  const [sidebarWidth, setSidebarWidth] = createSignal(240); // サイドバー初期幅
-  const [threadWidth, setThreadWidth] = createSignal(360);   // スレッド初期幅
-  const [resizeType, setResizeType] = createSignal(null);     // "sidebar" | "thread" | null
+  // --- 🛠️ スレッド幅調整用のシグナルとロジック ---
+  const [threadWidth, setThreadWidth] = createSignal(360); // 初期値 360px
+  let isResizing = false;
 
-  // ドラッグ開始時のマウス位置と、その時の初期幅を記録する一時変数
-  let startX = 0;
-  let startWidth = 0;
-
-  const startResize = (type) => (e) => {
+  const startResize = (e) => {
     e.preventDefault();
-    setResizeType(type);
-    
-    // 掴んだ瞬間のマウスのX座標と現在のパネル幅を記憶
-    startX = e.clientX;
-    if (type === "sidebar") {
-      startWidth = sidebarWidth();
-    } else if (type === "thread") {
-      startWidth = threadWidth();
-    }
-    
-    // イベントリスナーをドキュメント全体に登録
+    isResizing = true;
     document.addEventListener("mousemove", handleResize);
     document.addEventListener("mouseup", stopResize);
-    
-    // ドラッグ中のテキスト選択防止・カーソル固定
+    // リサイズ中にテキスト選択されてしまうのを防ぐ
     document.body.style.userSelect = "none";
-    document.body.style.webkitUserSelect = "none";
     document.body.style.cursor = "col-resize";
   };
 
   const handleResize = (e) => {
-    const currentType = resizeType();
-    if (!currentType) return;
-
-    // 開始位置からのマウス移動距離を計算
-    const deltaX = e.clientX - startX;
-
-    if (currentType === "sidebar") {
-      // サイドバーは右に引っ張ると広がる（プラス）
-      const newWidth = startWidth + deltaX;
-      if (newWidth >= 120 && newWidth <= 500) {
-        setSidebarWidth(newWidth);
-      }
-    } else if (currentType === "thread") {
-      // スレッドは左に引っ張ると広がる（マイナス）
-      const newWidth = startWidth - deltaX;
-      if (newWidth >= 200 && newWidth <= 600) {
-        setThreadWidth(newWidth);
-      }
+    if (!isResizing) return;
+    // 画面右端からの距離を計算してスレッドの幅を決定
+    const newWidth = window.innerWidth - e.clientX;
+    
+    // 最小幅 280px、最大幅 600px の間で制限をかける
+    if (newWidth >= 280 && newWidth <= 600) {
+      setThreadWidth(newWidth);
     }
   };
 
   const stopResize = () => {
-    setResizeType(null);
+    isResizing = false;
     document.removeEventListener("mousemove", handleResize);
     document.removeEventListener("mouseup", stopResize);
-    
     document.body.style.userSelect = "";
-    document.body.style.webkitUserSelect = "";
     document.body.style.cursor = "";
   };
 
+  // コンポーネント破棄時にイベントリスナーをクリーンアップ
   onCleanup(() => stopResize());
   // --------------------------------------------
 
-  // 時間フォーマット取得ヘルパー
   const getFormattedTime = () => {
     return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  // メインチャットのメッセージデータ
   const [messages, setMessages] = createSignal([
     { id: 1, channelId: "general", user: "Alice", text: "こんにちは！", reactions: { "👍": 2 }, hasReacted: ["👍"], time: "12:00 PM", file: null },
     { id: 2, channelId: "general", user: "Bob", text: "SolidJSのサンプルです。", reactions: {}, hasReacted: [], time: "12:01 PM", file: null },
   ]);
 
-  // スレッド（返信）のメッセージデータ
   const [threadMessages, setThreadMessages] = createSignal([]);
   const [activeThreadParentId, setActiveThreadParentId] = createSignal(null);
   
-  // スレッド用入力フォームの状態
   const [threadInputText, setThreadInputText] = createSignal("");
   const [threadAttachedFile, setThreadAttachedFile] = createSignal(null);
 
-  // データ抽出用の派生シグナル（Selectors）
   const activeChannel = () => channels().find(c => c.id === activeChannelId());
   const filteredMessages = () => messages().filter(m => m.channelId === activeChannelId());
   const activeThreadParentMessage = () => messages().find(m => m.id === activeThreadParentId());
   const filteredThreadMessages = () => threadMessages().filter(m => m.parentMessageId === activeThreadParentId());
 
-  // チャンネル切り替え
   const handleChannelChange = (channelId) => {
     setActiveChannelId(channelId);
-    setActiveThreadParentId(null); // チャンネル移動時はスレッドを閉じる
+    setActiveThreadParentId(null);
   };
 
-  // メインメッセージ送信（ChatAreaから fileObj を受け取る）
   const handleSendMainMessage = (text, fileObj) => {
     const newMessage = {
       id: Date.now(),
       channelId: activeChannelId(),
       user: "You",
       text: text,
-      file: fileObj, // { name, type, url }
+      file: fileObj,
       reactions: {},
       hasReacted: [],
       time: getFormattedTime()
@@ -124,7 +87,6 @@ export default function App() {
     setMessages([...messages(), newMessage]);
   };
 
-  // スレッドメッセージ送信
   const handleSendThreadMessage = (e) => {
     e.preventDefault();
     if (!threadInputText().trim() && !threadAttachedFile()) return;
@@ -134,7 +96,7 @@ export default function App() {
       parentMessageId: activeThreadParentId(),
       user: "You",
       text: threadInputText().trim(),
-      file: threadAttachedFile(), // 画像だけでなく全ファイル形式を共通オブジェクトで管理
+      file: threadAttachedFile(),
       reactions: {},
       hasReacted: [],
       time: getFormattedTime()
@@ -145,7 +107,6 @@ export default function App() {
     setThreadAttachedFile(null);
   };
 
-  // メインメッセージへの絵文字リアクション処理
   const handleReactToMain = (messageId, emoji) => {
     setMessages(messages().map(msg => {
       if (msg.id !== messageId) return msg;
@@ -164,7 +125,6 @@ export default function App() {
     }));
   };
 
-  // スレッドメッセージへの絵文字リアクション処理
   const handleReactToThread = (replyId, emoji) => {
     setThreadMessages(threadMessages().map(reply => {
       if (reply.id !== replyId) return reply;
@@ -183,87 +143,14 @@ export default function App() {
     }));
   };
 
-  // メッセージごとの返信数をカウント
   const getReplyCount = (messageId) => {
     return threadMessages().filter(m => m.parentMessageId === messageId).length;
   };
 
-  // 🛠️ メインメッセージの編集処理
-  const handleEditMessage = (messageId, newText) => {
-    setMessages(messages().map(msg => 
-      msg.id === messageId ? { ...msg, text: newText, isEdited: true } : msg
-    ));
-  };
-
-  // 🛠️ メインメッセージの削除処理
-  /*
-  const handleDeleteMessage = (messageId) => {
-    setMessages(messages().filter(msg => msg.id !== messageId));
-    
-    // もし削除されたメッセージのスレッドが現在右側に開いていた場合は自動で閉じる
-    if (activeThreadParentId() === messageId) {
-      setActiveThreadParentId(null);
-    }
-  };
-  */
-  const handleDeleteMessage = (messageId) => {
-    const targetMsg = messages().find(msg => msg.id === messageId);
-    // 💡 削除されるメッセージにファイルがあれば、メモリから完全に解放
-    if (targetMsg?.file?.url) {
-      URL.revokeObjectURL(targetMsg.file.url);
-    }
-
-    setMessages(messages().filter(msg => msg.id !== messageId));
-    
-    if (activeThreadParentId() === messageId) {
-      setActiveThreadParentId(null);
-    }
-  };
-
-  // 🛠️ スレッド（返信）メッセージの編集処理
-  const handleEditReply = (replyId, newText) => {
-    setThreadMessages(threadMessages().map(reply => 
-      reply.id === replyId ? { ...reply, text: newText, isEdited: true } : reply
-    ));
-  };
-
-  // 🛠️ スレッド（返信）メッセージの削除処理
-  /*
-  const handleDeleteReply = (replyId) => {
-    setThreadMessages(threadMessages().filter(reply => reply.id !== replyId));
-  };
-  */
-
-  const handleDeleteReply = (replyId) => {
-    const targetReply = threadMessages().find(reply => reply.id === replyId);
-    // 💡 削除される返信にファイルがあれば、メモリから完全に解放
-    if (targetReply?.file?.url) {
-      URL.revokeObjectURL(targetReply.file.url);
-    }
-
-    setThreadMessages(threadMessages().filter(reply => reply.id !== replyId));
-  };
-
   return (
     <div style={{ display: "flex", height: "100vh", "font-family": "sans-serif", color: "#1d1c1d", overflow: "hidden" }}>
-      {/* 1. サイドバー（可変幅 props 伝達） */}
-      <Sidebar width={sidebarWidth()} channels={channels()} activeChannelId={activeChannelId()} onChannelChange={handleChannelChange} />
+      <Sidebar channels={channels()} activeChannelId={activeChannelId()} onChannelChange={handleChannelChange} />
       
-      {/* 2. サイドバーとメインチャットの間のリサイザー */}
-      <div
-        onMouseDown={startResize("sidebar")}
-        style={{
-          width: "6px",
-          cursor: "col-resize",
-          background: "#e2e2e2",
-          "z-index": 50,
-          transition: "background 0.2s",
-        }}
-        onMouseOver={(e) => e.currentTarget.style.background = "#1264a3"}
-        onMouseOut={(e) => e.currentTarget.style.background = "#e2e2e2"}
-      />
-
-      {/* 3. メインチャットエリア */}
       <ChatArea 
         activeChannelName={activeChannel()?.name}
         messages={filteredMessages()}
@@ -271,27 +158,27 @@ export default function App() {
         onReact={handleReactToMain}
         onOpenThread={setActiveThreadParentId}
         getReplyCount={getReplyCount}
-        onEditMessage={handleEditMessage}    
-        onDeleteMessage={handleDeleteMessage}
       />
 
-      {/* 4. スレッドパネル（開いている時のみリサイザーとパネルを表示） */}
+      {/* 🛠️ スレッドが開いている時だけリサイザーとパネルを表示 */}
       <Show when={activeThreadParentId() !== null}>
+        {/* ドラッグ用の境界線（ディバイダー） */}
         <div
-          onMouseDown={startResize("thread")}
+          onMouseDown={startResize}
           style={{
-            width: "6px",
+            width: "4px",
             cursor: "col-resize",
             background: "#e2e2e2",
-            "z-index": 50,
+            "z-index": 10,
             transition: "background 0.2s",
           }}
+          // ホバーした時に少し濃くしてドラッグ可能であることを示す
           onMouseOver={(e) => e.currentTarget.style.background = "#1264a3"}
           onMouseOut={(e) => e.currentTarget.style.background = "#e2e2e2"}
         />
 
         <ThreadPanel 
-          width={threadWidth()}
+          width={threadWidth()} // 🛠️ 計算された幅をPropsとして渡す
           parentMessage={activeThreadParentMessage()}
           replies={filteredThreadMessages()}
           inputText={threadInputText()}
@@ -302,8 +189,6 @@ export default function App() {
           onReactToThread={handleReactToThread}
           onReactToParent={(emoji) => handleReactToMain(activeThreadParentId(), emoji)}
           onClose={() => setActiveThreadParentId(null)}
-          onEditReply={handleEditReply}  
-          onDeleteReply={handleDeleteReply}
         />
       </Show>
     </div>
